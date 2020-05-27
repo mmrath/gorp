@@ -7,22 +7,9 @@
 [![godoc v2](https://img.shields.io/badge/godoc-v2-375EAB.svg)](https://godoc.org/gopkg.in/gorp.v2)
 [![godoc bleeding edge](https://img.shields.io/badge/godoc-bleeding--edge-375EAB.svg)](https://godoc.org/github.com/go-gorp/gorp)
 
-### Update 2016-11-13: Future versions
+### Fork
 
-As many of the maintainers have become busy with other projects,
-progress toward the ever-elusive v2 has slowed to the point that we're
-only occasionally making progress outside of merging pull requests.
-In the interest of continuing to release, I'd like to lean toward a
-more maintainable path forward.
-
-For the moment, I am releasing a v2 tag with the current feature set
-from master, as some of those features have been actively used and
-relied on by more than one project.  Our next goal is to continue
-cleaning up the code base with non-breaking changes as much as
-possible, but if/when a breaking change is needed, we'll just release
-new versions.  This allows us to continue development at whatever pace
-we're capable of, without delaying the release of features or refusing
-PRs.
+This is a fork of go-gorp/gorp
 
 ## Introduction
 

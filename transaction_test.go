@@ -162,7 +162,7 @@ AND field12 IN (:FieldIntList)
 			defer tx.Rollback()
 
 			var dummy []int
-			_, err = tx.Select(&dummy, tt.query, tt.args...)
+			err = tx.Select(&dummy, tt.query, tt.args...)
 			if err != nil {
 				t.Fatal(err)
 			}

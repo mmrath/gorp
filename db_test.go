@@ -170,7 +170,7 @@ AND field12 IN (:FieldIntList)
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			var dummy []int
-			_, err := dbmap.Select(&dummy, tt.query, tt.args...)
+			err := dbmap.Select(&dummy, tt.query, tt.args...)
 			if err != nil {
 				t.Fatal(err)
 			}

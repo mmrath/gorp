@@ -91,12 +91,12 @@ type TypeConverter interface {
 // information.
 type SqlExecutor interface {
 	WithContext(ctx context.Context) SqlExecutor
-	Get(i interface{}, keys ...interface{}) (interface{}, error)
+	Get(i interface{}, keys ...interface{}) error
 	Insert(list ...interface{}) error
 	Update(list ...interface{}) (int64, error)
 	Delete(list ...interface{}) (int64, error)
 	Exec(query string, args ...interface{}) (sql.Result, error)
-	Select(i interface{}, query string, args ...interface{}) ([]interface{}, error)
+	Select(i interface{}, query string, args ...interface{}) error
 	SelectInt(query string, args ...interface{}) (int64, error)
 	SelectNullInt(query string, args ...interface{}) (sql.NullInt64, error)
 	SelectFloat(query string, args ...interface{}) (float64, error)
@@ -368,18 +368,7 @@ type foundTable struct {
 	dynName *string
 }
 
-func tableFor(m *DbMap, t reflect.Type, i interface{}) (*foundTable, error) {
-	if dyn, isDynamic := i.(DynamicTable); isDynamic {
-		tableName := dyn.TableName()
-		table, err := m.DynamicTableFor(tableName, true)
-		if err != nil {
-			return nil, err
-		}
-		return &foundTable{
-			table:   table,
-			dynName: &tableName,
-		}, nil
-	}
+func tableFor(m *DbMap, t reflect.Type) (*foundTable, error) {
 	table, err := m.TableFor(t, true)
 	if err != nil {
 		return nil, err
@@ -387,70 +376,21 @@ func tableFor(m *DbMap, t reflect.Type, i interface{}) (*foundTable, error) {
 	return &foundTable{table: table}, nil
 }
 
-func get(m *DbMap, exec SqlExecutor, i interface{},
-	keys ...interface{}) (interface{}, error) {
-
+func get(m *DbMap, exec SqlExecutor, i interface{}, keys ...interface{}) error {
 	t, err := toType(i)
 	if err != nil {
-		return nil, err
+		return  err
 	}
 
-	foundTable, err := tableFor(m, t, i)
+	foundTable, err := tableFor(m, t)
 	if err != nil {
-		return nil, err
+		return  err
 	}
 	table := foundTable.table
 
 	plan := table.bindGet()
 
-	v := reflect.New(t)
-	if foundTable.dynName != nil {
-		retDyn := v.Interface().(DynamicTable)
-		retDyn.SetTableName(*foundTable.dynName)
-	}
-
-	dest := make([]interface{}, len(plan.argFields))
-
-	conv := m.TypeConverter
-	custScan := make([]CustomScanner, 0)
-
-	for x, fieldName := range plan.argFields {
-		f := v.Elem().FieldByName(fieldName)
-		target := f.Addr().Interface()
-		if conv != nil {
-			scanner, ok := conv.FromDb(target)
-			if ok {
-				target = scanner.Holder
-				custScan = append(custScan, scanner)
-			}
-		}
-		dest[x] = target
-	}
-
-	row := exec.QueryRow(plan.query, keys...)
-	err = row.Scan(dest...)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			err = nil
-		}
-		return nil, err
-	}
-
-	for _, c := range custScan {
-		err = c.Bind()
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if v, ok := v.Interface().(HasPostGet); ok {
-		err := v.PostGet(exec)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return v.Interface(), nil
+	return SelectOne(m,exec,i, plan.query, keys...)
 }
 
 func delete(m *DbMap, exec SqlExecutor, list ...interface{}) (int64, error) {

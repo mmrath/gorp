@@ -5,6 +5,7 @@
 package gorp
 
 import (
+	"database/sql"
 	"fmt"
 	"reflect"
 )
@@ -43,14 +44,17 @@ func lockError(m *DbMap, exec SqlExecutor, tableName string,
 	existingVer int64, elem reflect.Value,
 	keys ...interface{}) (int64, error) {
 
-	existing, err := get(m, exec, elem.Interface(), keys...)
-	if err != nil {
-		return -1, err
-	}
+	existing := reflect.New(elem.Type())
 
+	err := get(m, exec,existing.Interface(), keys...)
 	ole := OptimisticLockError{tableName, keys, true, existingVer}
-	if existing == nil {
-		ole.RowExists = false
+	if err != nil {
+		if err == sql.ErrNoRows {
+			ole.RowExists = false
+			return -1, ole
+		}
+
+		return -1, err
 	}
 	return -1, ole
 }

@@ -23,7 +23,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-gorp/gorp/v3"
+	"github.com/mmrath/gorp/v3"
 
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
@@ -414,266 +414,6 @@ func (curObj *TenantDynamic) SetTableName(tblName string) {
 	curObj.curTable = tblName
 }
 
-var dynTableInst1 = TenantDynamic{curTable: "t_1_tenant_dynamic"}
-var dynTableInst2 = TenantDynamic{curTable: "t_2_tenant_dynamic"}
-
-func dynamicTablesTest(t *testing.T, dbmap *gorp.DbMap) {
-
-	dynamicTablesTestTableMap(t, dbmap, &dynTableInst1)
-	dynamicTablesTestTableMap(t, dbmap, &dynTableInst2)
-
-	// TEST - dbmap.Insert using dynTableInst1
-	dynTableInst1.Name = "Test Name 1"
-	dynTableInst1.Address = "Test Address 1"
-	err := dbmap.Insert(&dynTableInst1)
-	if err != nil {
-		t.Errorf("Errow while saving dynTableInst1. Details: %v", err)
-	}
-
-	// TEST - dbmap.Insert using dynTableInst2
-	dynTableInst2.Name = "Test Name 2"
-	dynTableInst2.Address = "Test Address 2"
-	err = dbmap.Insert(&dynTableInst2)
-	if err != nil {
-		t.Errorf("Errow while saving dynTableInst2. Details: %v", err)
-	}
-
-	dynamicTablesTestSelect(t, dbmap, &dynTableInst1)
-	dynamicTablesTestSelect(t, dbmap, &dynTableInst2)
-	dynamicTablesTestSelectOne(t, dbmap, &dynTableInst1)
-	dynamicTablesTestSelectOne(t, dbmap, &dynTableInst2)
-	dynamicTablesTestGetUpdateGet(t, dbmap, &dynTableInst1)
-	dynamicTablesTestGetUpdateGet(t, dbmap, &dynTableInst2)
-	dynamicTablesTestDelete(t, dbmap, &dynTableInst1)
-	dynamicTablesTestDelete(t, dbmap, &dynTableInst2)
-
-}
-
-func dynamicTablesTestTableMap(t *testing.T,
-	dbmap *gorp.DbMap,
-	inpInst *TenantDynamic) {
-
-	tableName := inpInst.TableName()
-
-	tblMap, err := dbmap.DynamicTableFor(tableName, true)
-	if err != nil {
-		t.Errorf("Error while searching for tablemap for tableName: %v, Error:%v", tableName, err)
-	}
-	if tblMap == nil {
-		t.Errorf("Unable to find tablemap for tableName:%v", tableName)
-	}
-}
-
-func dynamicTablesTestSelect(t *testing.T,
-	dbmap *gorp.DbMap,
-	inpInst *TenantDynamic) {
-
-	// TEST - dbmap.Select using inpInst
-
-	// read the data back from dynInst to see if the
-	// table mapping is correct
-	var dbTenantInst1 = TenantDynamic{curTable: inpInst.curTable}
-	selectSQL1 := "select * from " + inpInst.curTable
-	dbObjs, err := dbmap.Select(&dbTenantInst1, selectSQL1)
-	if err != nil {
-		t.Errorf("Errow in dbmap.Select. SQL: %v, Details: %v", selectSQL1, err)
-	}
-	if dbObjs == nil {
-		t.Fatalf("Nil return from dbmap.Select")
-	}
-	rwCnt := len(dbObjs)
-	if rwCnt != 1 {
-		t.Errorf("Unexpected row count for tenantInst:%v", rwCnt)
-	}
-
-	dbInst := dbObjs[0].(*TenantDynamic)
-
-	inpTableName := inpInst.TableName()
-	resTableName := dbInst.TableName()
-	if inpTableName != resTableName {
-		t.Errorf("Mismatched table names %v != %v ",
-			inpTableName, resTableName)
-	}
-
-	if inpInst.Id != dbInst.Id {
-		t.Errorf("Mismatched Id values %v != %v ",
-			inpInst.Id, dbInst.Id)
-	}
-
-	if inpInst.Name != dbInst.Name {
-		t.Errorf("Mismatched Name values %v != %v ",
-			inpInst.Name, dbInst.Name)
-	}
-
-	if inpInst.Address != dbInst.Address {
-		t.Errorf("Mismatched Address values %v != %v ",
-			inpInst.Address, dbInst.Address)
-	}
-}
-
-func dynamicTablesTestGetUpdateGet(t *testing.T,
-	dbmap *gorp.DbMap,
-	inpInst *TenantDynamic) {
-
-	// TEST - dbmap.Get, dbmap.Update, dbmap.Get sequence
-
-	// read and update one of the instances to make sure
-	// that the common gorp APIs are working well with dynamic table
-	var inpIface2 = TenantDynamic{curTable: inpInst.curTable}
-	dbObj, err := dbmap.Get(&inpIface2, inpInst.Id)
-	if err != nil {
-		t.Errorf("Errow in dbmap.Get. id: %v, Details: %v", inpInst.Id, err)
-	}
-	if dbObj == nil {
-		t.Errorf("Nil return from dbmap.Get")
-	}
-
-	dbInst := dbObj.(*TenantDynamic)
-
-	{
-		inpTableName := inpInst.TableName()
-		resTableName := dbInst.TableName()
-		if inpTableName != resTableName {
-			t.Errorf("Mismatched table names %v != %v ",
-				inpTableName, resTableName)
-		}
-
-		if inpInst.Id != dbInst.Id {
-			t.Errorf("Mismatched Id values %v != %v ",
-				inpInst.Id, dbInst.Id)
-		}
-
-		if inpInst.Name != dbInst.Name {
-			t.Errorf("Mismatched Name values %v != %v ",
-				inpInst.Name, dbInst.Name)
-		}
-
-		if inpInst.Address != dbInst.Address {
-			t.Errorf("Mismatched Address values %v != %v ",
-				inpInst.Address, dbInst.Address)
-		}
-	}
-
-	{
-		updatedName := "Testing Updated Name2"
-		dbInst.Name = updatedName
-		cnt, err := dbmap.Update(dbInst)
-		if err != nil {
-			t.Errorf("Error from dbmap.Update: %v", err.Error())
-		}
-		if cnt != 1 {
-			t.Errorf("Update count must be 1, got %v", cnt)
-		}
-
-		// Read the object again to make sure that the
-		// data was updated in db
-		dbObj2, err := dbmap.Get(&inpIface2, inpInst.Id)
-		if err != nil {
-			t.Errorf("Errow in dbmap.Get. id: %v, Details: %v", inpInst.Id, err)
-		}
-		if dbObj2 == nil {
-			t.Errorf("Nil return from dbmap.Get")
-		}
-
-		dbInst2 := dbObj2.(*TenantDynamic)
-
-		inpTableName := inpInst.TableName()
-		resTableName := dbInst2.TableName()
-		if inpTableName != resTableName {
-			t.Errorf("Mismatched table names %v != %v ",
-				inpTableName, resTableName)
-		}
-
-		if inpInst.Id != dbInst2.Id {
-			t.Errorf("Mismatched Id values %v != %v ",
-				inpInst.Id, dbInst2.Id)
-		}
-
-		if updatedName != dbInst2.Name {
-			t.Errorf("Mismatched Name values %v != %v ",
-				updatedName, dbInst2.Name)
-		}
-
-		if inpInst.Address != dbInst.Address {
-			t.Errorf("Mismatched Address values %v != %v ",
-				inpInst.Address, dbInst.Address)
-		}
-
-	}
-}
-
-func dynamicTablesTestSelectOne(t *testing.T,
-	dbmap *gorp.DbMap,
-	inpInst *TenantDynamic) {
-
-	// TEST - dbmap.SelectOne
-
-	// read the data back from inpInst to see if the
-	// table mapping is correct
-	var dbTenantInst1 = TenantDynamic{curTable: inpInst.curTable}
-	selectSQL1 := "select * from " + dbTenantInst1.curTable + " where id = :idKey"
-	params := map[string]interface{}{"idKey": inpInst.Id}
-	err := dbmap.SelectOne(&dbTenantInst1, selectSQL1, params)
-	if err != nil {
-		t.Errorf("Errow in dbmap.SelectOne. SQL: %v, Details: %v", selectSQL1, err)
-	}
-
-	inpTableName := inpInst.curTable
-	resTableName := dbTenantInst1.TableName()
-	if inpTableName != resTableName {
-		t.Errorf("Mismatched table names %v != %v ",
-			inpTableName, resTableName)
-	}
-
-	if inpInst.Id != dbTenantInst1.Id {
-		t.Errorf("Mismatched Id values %v != %v ",
-			inpInst.Id, dbTenantInst1.Id)
-	}
-
-	if inpInst.Name != dbTenantInst1.Name {
-		t.Errorf("Mismatched Name values %v != %v ",
-			inpInst.Name, dbTenantInst1.Name)
-	}
-
-	if inpInst.Address != dbTenantInst1.Address {
-		t.Errorf("Mismatched Address values %v != %v ",
-			inpInst.Address, dbTenantInst1.Address)
-	}
-}
-
-func dynamicTablesTestDelete(t *testing.T,
-	dbmap *gorp.DbMap,
-	inpInst *TenantDynamic) {
-
-	// TEST - dbmap.Delete
-	cnt, err := dbmap.Delete(inpInst)
-	if err != nil {
-		t.Errorf("Errow in dbmap.Delete. Details: %v", err)
-	}
-	if cnt != 1 {
-		t.Errorf("Expected delete count for %v : 1, found count:%v",
-			inpInst.TableName(), cnt)
-	}
-
-	// Try reading again to make sure instance is gone from db
-	getInst := TenantDynamic{curTable: inpInst.TableName()}
-	dbInst, err := dbmap.Get(&getInst, inpInst.Id)
-	if err != nil {
-		t.Errorf("Error while trying to read deleted %v object using id: %v",
-			inpInst.TableName(), inpInst.Id)
-	}
-
-	if dbInst != nil {
-		t.Errorf("Found deleted %v instance using id: %v",
-			inpInst.TableName(), inpInst.Id)
-	}
-
-	if getInst.Name != "" {
-		t.Errorf("Found data from deleted %v instance using id: %v",
-			inpInst.TableName(), inpInst.Id)
-	}
-
-}
 
 func TestCreateTablesIfNotExists(t *testing.T) {
 	dbmap := initDbMap()
@@ -705,12 +445,20 @@ func TestTruncateTables(t *testing.T) {
 	}
 
 	// Make sure all rows are deleted
-	rows, _ := dbmap.Select(Person{}, "SELECT * FROM person_test")
+	var rows []Person
+	err = dbmap.Select(&rows, "SELECT * FROM person_test")
+	if err != nil {
+		t.Errorf("error while select")
+	}
 	if len(rows) != 0 {
 		t.Errorf("Expected 0 person rows, got %d", len(rows))
 	}
-	rows, _ = dbmap.Select(Invoice{}, "SELECT * FROM invoice_test")
-	if len(rows) != 0 {
+	var invoiceRows []Invoice
+	err = dbmap.Select(&invoiceRows, "SELECT * FROM invoice_test")
+	if err != nil {
+		t.Errorf("error while select from invoice_test")
+	}
+	if len(invoiceRows) != 0 {
 		t.Errorf("Expected 0 invoice rows, got %d", len(rows))
 	}
 }
@@ -740,14 +488,14 @@ func TestCustomDateType(t *testing.T) {
 	if _, driver := dialectAndDriver(); driver == "mysql" {
 		t.Skip("TestCustomDateType can't run Get() with the mysql driver; skipping the rest of this test...")
 	}
-	result, err := dbmap.Get(new(WithCustomDate), test1.Id)
+	result := new(WithCustomDate)
+	err = dbmap.Get(result, test1.Id)
 	if err != nil {
 		t.Errorf("Could not get struct with custom date field: %s", err)
 		t.FailNow()
 	}
-	test2 := result.(*WithCustomDate)
-	if test2.Added.UTC() != test1.Added.UTC() {
-		t.Errorf("Custom dates do not match: %v != %v", test2.Added.UTC(), test1.Added.UTC())
+	if result.Added.UTC() != test1.Added.UTC() {
+		t.Errorf("Custom dates do not match: %v != %v", result.Added.UTC(), test1.Added.UTC())
 	}
 }
 
@@ -874,25 +622,26 @@ func TestPersistentUser(t *testing.T) {
 	}
 
 	// prove we can pass a pointer into Get
-	pu2, err := dbmap.Get(pu, pu.Key)
+	pu2 := new(PersistentUser)
+	err = dbmap.Get(pu2, pu.Key)
 	if err != nil {
 		panic(err)
 	}
 	if !reflect.DeepEqual(pu, pu2) {
 		t.Errorf("%v!=%v", pu, pu2)
 	}
-
-	arr, err := dbmap.Select(pu, "select * from "+tableName(dbmap, PersistentUser{}))
+	var arr []PersistentUser
+	err = dbmap.Select(&arr, "select * from "+tableName(dbmap, PersistentUser{}))
 	if err != nil {
 		panic(err)
 	}
-	if !reflect.DeepEqual(pu, arr[0]) {
+	if !reflect.DeepEqual(*pu, arr[0]) {
 		t.Errorf("%v!=%v", pu, arr[0])
 	}
 
 	// prove we can get the results back in a slice
 	var puArr []*PersistentUser
-	_, err = dbmap.Select(&puArr, "select * from "+tableName(dbmap, PersistentUser{}))
+	err = dbmap.Select(&puArr, "select * from "+tableName(dbmap, PersistentUser{}))
 	if err != nil {
 		panic(err)
 	}
@@ -905,7 +654,7 @@ func TestPersistentUser(t *testing.T) {
 
 	// prove we can get the results back in a non-pointer slice
 	var puValues []PersistentUser
-	_, err = dbmap.Select(&puValues, "select * from "+tableName(dbmap, PersistentUser{}))
+	err = dbmap.Select(&puValues, "select * from "+tableName(dbmap, PersistentUser{}))
 	if err != nil {
 		panic(err)
 	}
@@ -918,7 +667,7 @@ func TestPersistentUser(t *testing.T) {
 
 	// prove we can get the results back in a string slice
 	var idArr []*string
-	_, err = dbmap.Select(&idArr, "select "+columnName(dbmap, PersistentUser{}, "Id")+" from "+tableName(dbmap, PersistentUser{}))
+	err = dbmap.Select(&idArr, "select "+columnName(dbmap, PersistentUser{}, "Id")+" from "+tableName(dbmap, PersistentUser{}))
 	if err != nil {
 		panic(err)
 	}
@@ -931,7 +680,7 @@ func TestPersistentUser(t *testing.T) {
 
 	// prove we can get the results back in an int slice
 	var keyArr []*int32
-	_, err = dbmap.Select(&keyArr, "select mykey from "+tableName(dbmap, PersistentUser{}))
+	err = dbmap.Select(&keyArr, "select mykey from "+tableName(dbmap, PersistentUser{}))
 	if err != nil {
 		panic(err)
 	}
@@ -944,7 +693,7 @@ func TestPersistentUser(t *testing.T) {
 
 	// prove we can get the results back in a bool slice
 	var passedArr []*bool
-	_, err = dbmap.Select(&passedArr, "select "+columnName(dbmap, PersistentUser{}, "PassedTraining")+" from "+tableName(dbmap, PersistentUser{}))
+	err = dbmap.Select(&passedArr, "select "+columnName(dbmap, PersistentUser{}, "PassedTraining")+" from "+tableName(dbmap, PersistentUser{}))
 	if err != nil {
 		panic(err)
 	}
@@ -957,7 +706,7 @@ func TestPersistentUser(t *testing.T) {
 
 	// prove we can get the results back in a non-pointer slice
 	var stringArr []string
-	_, err = dbmap.Select(&stringArr, "select "+columnName(dbmap, PersistentUser{}, "Id")+" from "+tableName(dbmap, PersistentUser{}))
+	err = dbmap.Select(&stringArr, "select "+columnName(dbmap, PersistentUser{}, "Id")+" from "+tableName(dbmap, PersistentUser{}))
 	if err != nil {
 		panic(err)
 	}
@@ -988,7 +737,7 @@ func TestNamedQueryMap(t *testing.T) {
 
 	// Test simple case
 	var puArr []*PersistentUser
-	_, err = dbmap.Select(&puArr, "select * from "+tableName(dbmap, PersistentUser{})+" where mykey = :Key", map[string]interface{}{
+	err = dbmap.Select(&puArr, "select * from "+tableName(dbmap, PersistentUser{})+" where mykey = :Key", map[string]interface{}{
 		"Key": 43,
 	})
 	if err != nil {
@@ -1004,7 +753,7 @@ func TestNamedQueryMap(t *testing.T) {
 
 	// Test more specific map value type is ok
 	puArr = nil
-	_, err = dbmap.Select(&puArr, "select * from "+tableName(dbmap, PersistentUser{})+" where mykey = :Key", map[string]int{
+	err = dbmap.Select(&puArr, "select * from "+tableName(dbmap, PersistentUser{})+" where mykey = :Key", map[string]int{
 		"Key": 43,
 	})
 	if err != nil {
@@ -1017,7 +766,7 @@ func TestNamedQueryMap(t *testing.T) {
 
 	// Test multiple parameters set.
 	puArr = nil
-	_, err = dbmap.Select(&puArr, `
+	err = dbmap.Select(&puArr, `
 select * from `+tableName(dbmap, PersistentUser{})+`
  where mykey = :Key
    and `+columnName(dbmap, PersistentUser{}, "PassedTraining")+` = :PassedTraining
@@ -1037,7 +786,7 @@ select * from `+tableName(dbmap, PersistentUser{})+`
 	// Test colon within a non-key string
 	// Test having extra, unused properties in the map.
 	puArr = nil
-	_, err = dbmap.Select(&puArr, `
+	err = dbmap.Select(&puArr, `
 select * from `+tableName(dbmap, PersistentUser{})+`
  where mykey = :Key
    and `+columnName(dbmap, PersistentUser{}, "Id")+` != 'abc:def'`, map[string]interface{}{
@@ -1085,7 +834,7 @@ func TestNamedQueryStruct(t *testing.T) {
 
 	// Test select self
 	var puArr []*PersistentUser
-	_, err = dbmap.Select(&puArr, `
+	err = dbmap.Select(&puArr, `
 select * from `+tableName(dbmap, PersistentUser{})+`
  where mykey = :Key
    and `+columnName(dbmap, PersistentUser{}, "PassedTraining")+` = :PassedTraining
@@ -1128,7 +877,8 @@ func TestReturnsNonNilSlice(t *testing.T) {
 		t.Errorf("r1==nil")
 	}
 
-	r2 := rawSelect(dbmap, Invoice{}, noResultsSQL)
+	var r2 []Invoice
+	rawSelect(dbmap, &r2, noResultsSQL)
 	if r2 == nil {
 		t.Errorf("r2==nil")
 	}
@@ -1168,12 +918,12 @@ func TestOptimisticLocking(t *testing.T) {
 		t.Errorf("Insert didn't return a generated PK")
 		return
 	}
-
-	obj, err := dbmap.Get(Person{}, p1.Id)
+	obj := &Person{}
+	err := dbmap.Get(obj, p1.Id)
 	if err != nil {
 		panic(err)
 	}
-	p2 := obj.(*Person)
+	p2 := obj
 	p2.LName = "Edwards"
 	dbmap.Update(p2) // Version is now 2
 	if p2.Version != 2 {
@@ -1219,7 +969,7 @@ func TestNullValues(t *testing.T) {
 
 	// try to load it
 	expected := &TableWithNull{Id: 10}
-	obj := _get(dbmap, TableWithNull{}, 10)
+	obj := _get(dbmap, &TableWithNull{}, 10)
 	t1 := obj.(*TableWithNull)
 	if !reflect.DeepEqual(expected, t1) {
 		t.Errorf("%v != %v", expected, t1)
@@ -1238,7 +988,7 @@ func TestNullValues(t *testing.T) {
 	expected.Bytes = t1.Bytes
 	_update(dbmap, t1)
 
-	obj = _get(dbmap, TableWithNull{}, 10)
+	obj = _get(dbmap, &TableWithNull{}, 10)
 	t1 = obj.(*TableWithNull)
 	if t1.Str.String != "hi" {
 		t.Errorf("%s != hi", t1.Str.String)
@@ -1275,13 +1025,13 @@ func TestScannerValuer(t *testing.T) {
 		t.Errorf("Could not insert InvoiceWithValuer using Invoice table: %v", err)
 		t.FailNow()
 	}
-
-	res, err := dbmap.Get(InvoiceWithValuer{}, inv.Id)
+	res := &InvoiceWithValuer{}
+	err = dbmap.Get(res, inv.Id)
 	if err != nil {
 		t.Errorf("Could not get InvoiceWithValuer: %v", err)
 		t.FailNow()
 	}
-	dbInv := res.(*InvoiceWithValuer)
+	dbInv := res
 
 	if dbInv.Person.Id != pv.Id {
 		t.Errorf("InvoiceWithValuer got wrong person ID: %d (expected) != %d (actual)", pv.Id, dbInv.Person.Id)
@@ -1305,7 +1055,7 @@ func TestColumnProps(t *testing.T) {
 	// test transient
 	inv := &Invoice{0, 0, 1, "my invoice", 0, true}
 	_insert(dbmap, inv)
-	obj := _get(dbmap, Invoice{}, inv.Id)
+	obj := _get(dbmap, &Invoice{}, inv.Id)
 	inv = obj.(*Invoice)
 	if inv.Updated != 0 {
 		t.Errorf("Saved transient column 'Updated'")
@@ -1341,10 +1091,11 @@ func TestRawSelect(t *testing.T) {
 	query := "select i." + columnName(dbmap, Invoice{}, "Id") + " InvoiceId, p." + columnName(dbmap, Person{}, "Id") + " PersonId, i." + columnName(dbmap, Invoice{}, "Memo") + ", p." + columnName(dbmap, Person{}, "FName") + " " +
 		"from invoice_test i, person_test p " +
 		"where i." + columnName(dbmap, Invoice{}, "PersonId") + " = p." + columnName(dbmap, Person{}, "Id")
-	list := rawSelect(dbmap, InvoicePersonView{}, query)
+	var list []InvoicePersonView
+	rawSelect(dbmap, &list, query)
 	if len(list) != 1 {
 		t.Errorf("len(list) != 1: %d", len(list))
-	} else if !reflect.DeepEqual(expected, list[0]) {
+	} else if !reflect.DeepEqual(*expected, list[0]) {
 		t.Errorf("%v != %v", expected, list[0])
 	}
 }
@@ -1361,7 +1112,7 @@ func TestHooks(t *testing.T) {
 		t.Errorf("p1.PostInsert() didn't run: %v", p1)
 	}
 
-	obj := _get(dbmap, Person{}, p1.Id)
+	obj := _get(dbmap, &Person{}, p1.Id)
 	p1 = obj.(*Person)
 	if p1.LName != "postget" {
 		t.Errorf("p1.PostGet() didn't run: %v", p1)
@@ -1412,15 +1163,16 @@ func TestTransaction(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-
-	obj, err := dbmap.Get(Invoice{}, inv1.Id)
+	obj := &Invoice{}
+	err = dbmap.Get(obj, inv1.Id)
 	if err != nil {
 		panic(err)
 	}
 	if !reflect.DeepEqual(inv1, obj) {
 		t.Errorf("%v != %v", inv1, obj)
 	}
-	obj, err = dbmap.Get(Invoice{}, inv2.Id)
+	obj = &Invoice{}
+	err = dbmap.Get(obj, inv2.Id)
 	if err != nil {
 		panic(err)
 	}
@@ -1615,7 +1367,6 @@ func TestCrud(t *testing.T) {
 	foo := &AliasTransientField{BarStr: "some bar"}
 	testCrudInternal(t, dbmap, foo)
 
-	dynamicTablesTest(t, dbmap)
 }
 
 func testCrudInternal(t *testing.T, dbmap *gorp.DbMap, val testable) {
@@ -1654,13 +1405,26 @@ func testCrudInternal(t *testing.T, dbmap *gorp.DbMap, val testable) {
 	}
 
 	// Select *
-	rows, err := dbmap.Select(val, "select * from "+dbmap.Dialect.QuoteField(table.TableName))
+
+	ty := reflect.TypeOf(val)
+
+	for ty.Kind() == reflect.Ptr {
+		ty = ty.Elem()
+	}
+
+	sliceType := reflect.New(reflect.SliceOf(ty))
+
+	err = dbmap.Select(sliceType.Interface(), "select * from "+dbmap.Dialect.QuoteField(table.TableName))
 	if err != nil {
 		t.Errorf("couldn't select * from %s err=%v", dbmap.Dialect.QuoteField(table.TableName), err)
-	} else if len(rows) != 1 {
-		t.Errorf("unexpected row count in %s: %d", dbmap.Dialect.QuoteField(table.TableName), len(rows))
-	} else if !reflect.DeepEqual(val, rows[0]) {
-		t.Errorf("select * result: %v != %v", val, rows[0])
+	}
+	row := sliceType.Elem().Index(0).Addr().Interface()
+	rowLen := sliceType.Elem().Len()
+
+	if rowLen != 1 {
+		t.Errorf("unexpected row count in %s: %d", dbmap.Dialect.QuoteField(table.TableName), rowLen)
+	} else if !reflect.DeepEqual(reflect.ValueOf(val).Interface(), row) {
+		t.Errorf("select * result: %v != %v", reflect.ValueOf(val), row)
 	}
 
 	// DELETE row
@@ -1672,6 +1436,7 @@ func testCrudInternal(t *testing.T, dbmap *gorp.DbMap, val testable) {
 
 	// VERIFY deleted
 	val2 = _get(dbmap, val, val.GetId())
+
 	if val2 != nil {
 		t.Errorf("Found invoice with id: %d after Delete()", val.GetId())
 	}
@@ -1684,7 +1449,7 @@ func TestWithIgnoredColumn(t *testing.T) {
 	ic := &WithIgnoredColumn{-1, 0, 1}
 	_insert(dbmap, ic)
 	expected := &WithIgnoredColumn{0, 1, 1}
-	ic2 := _get(dbmap, WithIgnoredColumn{}, ic.Id).(*WithIgnoredColumn)
+	ic2 := _get(dbmap, &WithIgnoredColumn{}, ic.Id).(*WithIgnoredColumn)
 
 	if !reflect.DeepEqual(expected, ic2) {
 		t.Errorf("%v != %v", expected, ic2)
@@ -1693,7 +1458,7 @@ func TestWithIgnoredColumn(t *testing.T) {
 		t.Errorf("Did not delete row with Id: %d", ic.Id)
 		return
 	}
-	if _get(dbmap, WithIgnoredColumn{}, ic.Id) != nil {
+	if _get(dbmap, &WithIgnoredColumn{}, ic.Id) != nil {
 		t.Errorf("Found id: %d after Delete()", ic.Id)
 	}
 }
@@ -1730,7 +1495,7 @@ func TestTypeConversionExample(t *testing.T) {
 	_insert(dbmap, tc)
 
 	expected := &TypeConversionExample{1, p, CustomStringType("hi")}
-	tc2 := _get(dbmap, TypeConversionExample{}, tc.Id).(*TypeConversionExample)
+	tc2 := _get(dbmap, &TypeConversionExample{}, tc.Id).(*TypeConversionExample)
 	if !reflect.DeepEqual(expected, tc2) {
 		t.Errorf("tc2 %v != %v", expected, tc2)
 	}
@@ -1740,7 +1505,7 @@ func TestTypeConversionExample(t *testing.T) {
 	_update(dbmap, tc2)
 
 	expected = &TypeConversionExample{1, tc2.PersonJSON, CustomStringType("hi2")}
-	tc3 := _get(dbmap, TypeConversionExample{}, tc.Id).(*TypeConversionExample)
+	tc3 := _get(dbmap, &TypeConversionExample{}, tc.Id).(*TypeConversionExample)
 	if !reflect.DeepEqual(expected, tc3) {
 		t.Errorf("tc3 %v != %v", expected, tc3)
 	}
@@ -1758,7 +1523,7 @@ func TestWithEmbeddedStruct(t *testing.T) {
 	es := &WithEmbeddedStruct{-1, Names{FirstName: "Alice", LastName: "Smith"}}
 	_insert(dbmap, es)
 	expected := &WithEmbeddedStruct{1, Names{FirstName: "Alice", LastName: "Smith"}}
-	es2 := _get(dbmap, WithEmbeddedStruct{}, es.Id).(*WithEmbeddedStruct)
+	es2 := _get(dbmap, &WithEmbeddedStruct{}, es.Id).(*WithEmbeddedStruct)
 	if !reflect.DeepEqual(expected, es2) {
 		t.Errorf("%v != %v", expected, es2)
 	}
@@ -1766,13 +1531,14 @@ func TestWithEmbeddedStruct(t *testing.T) {
 	es2.FirstName = "Bob"
 	expected.FirstName = "Bob"
 	_update(dbmap, es2)
-	es2 = _get(dbmap, WithEmbeddedStruct{}, es.Id).(*WithEmbeddedStruct)
+	es2 = _get(dbmap, &WithEmbeddedStruct{}, es.Id).(*WithEmbeddedStruct)
 	if !reflect.DeepEqual(expected, es2) {
 		t.Errorf("%v != %v", expected, es2)
 	}
 
-	ess := rawSelect(dbmap, WithEmbeddedStruct{}, "select * from embedded_struct_test")
-	if !reflect.DeepEqual(es2, ess[0]) {
+	var ess []WithEmbeddedStruct
+	rawSelect(dbmap, &ess, "select * from embedded_struct_test")
+	if !reflect.DeepEqual(*es2, ess[0]) {
 		t.Errorf("%v != %v", es2, ess[0])
 	}
 }
@@ -2097,7 +1863,7 @@ func testWithTime(t *testing.T) {
 	w1 := WithTime{1, t1}
 	_insert(dbmap, &w1)
 
-	obj := _get(dbmap, WithTime{}, w1.Id)
+	obj := _get(dbmap, &WithTime{}, w1.Id)
 	w2 := obj.(*WithTime)
 	if w1.Time.UnixNano() != w2.Time.UnixNano() {
 		t.Errorf("%v != %v", w1, w2)
@@ -2119,7 +1885,7 @@ func testEmbeddedTime(t *testing.T) {
 	t1 := &EmbeddedTime{Id: "abc", Times: Times{One: time1, Two: time1.Add(10 * time.Second)}}
 	_insert(dbmap, t1)
 
-	x := _get(dbmap, EmbeddedTime{}, t1.Id)
+	x := _get(dbmap, &EmbeddedTime{}, t1.Id)
 	t2, _ := x.(*EmbeddedTime)
 	if t1.One.UnixNano() != t2.One.UnixNano() || t1.Two.UnixNano() != t2.Two.UnixNano() {
 		t.Errorf("%v != %v", t1, t2)
@@ -2137,7 +1903,7 @@ func TestWithTimeSelect(t *testing.T) {
 	_insert(dbmap, &w1, &w2)
 
 	var caseIds []int64
-	_, err := dbmap.Select(&caseIds, "SELECT "+columnName(dbmap, WithTime{}, "Id")+" FROM time_test WHERE "+columnName(dbmap, WithTime{}, "Time")+" < "+dbmap.Dialect.BindVar(0), halfhourago)
+	err := dbmap.Select(&caseIds, "SELECT "+columnName(dbmap, WithTime{}, "Id")+" FROM time_test WHERE "+columnName(dbmap, WithTime{}, "Time")+" < "+dbmap.Dialect.BindVar(0), halfhourago)
 
 	if err != nil {
 		t.Error(err)
@@ -2170,7 +1936,7 @@ func TestInvoicePersonView(t *testing.T) {
 	// pass a slice of pointers to Select()
 	// this avoids the need to type assert after the query is run
 	var list []*InvoicePersonView
-	_, err := dbmap.Select(&list, query)
+	err := dbmap.Select(&list, query)
 	if err != nil {
 		panic(err)
 	}
@@ -2204,7 +1970,8 @@ func TestQuoteTableNames(t *testing.T) {
 	logBuffer.Reset()
 
 	// Check if Get quotes the table name
-	dbmap.Get(Person{}, id)
+	_ = dbmap.Get(&Person{}, id)
+
 	if !bytes.Contains(logBuffer.Bytes(), []byte(quotedTableName)) {
 		t.Errorf(errorTemplate, quotedTableName)
 	}
@@ -2220,9 +1987,9 @@ func TestSelectTooManyCols(t *testing.T) {
 	_insert(dbmap, p1)
 	_insert(dbmap, p2)
 
-	obj := _get(dbmap, Person{}, p1.Id)
+	obj := _get(dbmap, &Person{}, p1.Id)
 	p1 = obj.(*Person)
-	obj = _get(dbmap, Person{}, p2.Id)
+	obj = _get(dbmap, &Person{}, p2.Id)
 	p2 = obj.(*Person)
 
 	params := map[string]interface{}{
@@ -2244,7 +2011,7 @@ func TestSelectTooManyCols(t *testing.T) {
 	}
 
 	var pSlice []FNameOnly
-	_, err = dbmap.Select(&pSlice, "select * from person_test order by "+columnName(dbmap, Person{}, "FName")+" asc")
+	err = dbmap.Select(&pSlice, "select * from person_test order by "+columnName(dbmap, Person{}, "FName")+" asc")
 	if err != nil {
 		if !gorp.NonFatalError(err) {
 			t.Error(err)
@@ -2268,7 +2035,7 @@ func TestSelectSingleVal(t *testing.T) {
 	p1 := &Person{0, 0, 0, "bob", "smith", 0}
 	_insert(dbmap, p1)
 
-	obj := _get(dbmap, Person{}, p1.Id)
+	obj := _get(dbmap, &Person{}, p1.Id)
 	p1 = obj.(*Person)
 
 	params := map[string]interface{}{
@@ -2601,16 +2368,13 @@ func BenchmarkGorpCrud(b *testing.B) {
 		if err != nil {
 			panic(err)
 		}
-
-		obj, err := dbmap.Get(Invoice{}, inv.Id)
+		obj := &Invoice{}
+		err = dbmap.Get(obj, inv.Id)
 		if err != nil {
 			panic(err)
 		}
 
-		inv2, ok := obj.(*Invoice)
-		if !ok {
-			panic(fmt.Sprintf("expected *Invoice, got: %v", obj))
-		}
+		inv2 := obj
 
 		inv2.Created = 1000
 		inv2.Updated = 2000
@@ -2654,8 +2418,6 @@ func initDbMap() *gorp.DbMap {
 	//dbmap.AddTableWithName(WithEmbeddedStructConflictingEmbeddedMemberNames{}, "embedded_struct_conflict_name_test").SetKeys(true, "Id")
 	//dbmap.AddTableWithName(WithEmbeddedStructSameMemberName{}, "embedded_struct_same_member_name_test").SetKeys(true, "Id")
 	dbmap.AddTableWithName(WithEmbeddedStructBeforeAutoincrField{}, "embedded_struct_before_autoincr_test").SetKeys(true, "Id")
-	dbmap.AddTableDynamic(&dynTableInst1, "").SetKeys(true, "Id").AddIndex("TenantInst1Index", "Btree", []string{"Name"}).SetUnique(true)
-	dbmap.AddTableDynamic(&dynTableInst2, "").SetKeys(true, "Id").AddIndex("TenantInst2Index", "Btree", []string{"Name"}).SetUnique(true)
 	dbmap.AddTableWithName(WithEmbeddedAutoincr{}, "embedded_autoincr_test").SetKeys(true, "Id")
 	dbmap.AddTableWithName(WithTime{}, "time_test").SetKeys(true, "Id")
 	dbmap.AddTableWithName(WithNullTime{}, "nulltime_test").SetKeys(false, "Id")
@@ -2765,12 +2527,14 @@ func _del(dbmap *gorp.DbMap, list ...interface{}) int64 {
 }
 
 func _get(dbmap *gorp.DbMap, i interface{}, keys ...interface{}) interface{} {
-	obj, err := dbmap.Get(i, keys...)
+	err := dbmap.Get(i, keys...)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil
+		}
 		panic(err)
 	}
-
-	return obj
+	return i
 }
 
 func selectInt(dbmap *gorp.DbMap, query string, args ...interface{}) int64 {
@@ -2835,12 +2599,11 @@ func rawExec(dbmap *gorp.DbMap, query string, args ...interface{}) sql.Result {
 	return res
 }
 
-func rawSelect(dbmap *gorp.DbMap, i interface{}, query string, args ...interface{}) []interface{} {
-	list, err := dbmap.Select(i, query, args...)
+func rawSelect(dbmap *gorp.DbMap, i interface{}, query string, args ...interface{}) {
+	err := dbmap.Select(i, query, args...)
 	if err != nil {
 		panic(err)
 	}
-	return list
 }
 
 func tableName(dbmap *gorp.DbMap, i interface{}) string {

@@ -95,7 +95,7 @@ func SelectOne(m *DbMap, e SqlExecutor, holder interface{}, query string, args .
 	if t.Kind() == reflect.Ptr {
 		t = t.Elem()
 	} else {
-		return fmt.Errorf("gorp: SelectOne holder must be a pointer, but got: %t", holder)
+		return fmt.Errorf("gorp: holder must be a pointer, but got: %t", holder)
 	}
 
 	// Handle pointer to pointer
@@ -171,8 +171,7 @@ func selectVal(e SqlExecutor, holder interface{}, query string, args ...interfac
 	return rows.Scan(holder)
 }
 
-func hookedselect(m *DbMap, exec SqlExecutor, i interface{}, query string,
-	args ...interface{}) ([]interface{}, error) {
+func hookedselect(m *DbMap, exec SqlExecutor, i interface{}, query string, args ...interface{}) ([]interface{}, error) {
 
 	var nonFatalErr error
 

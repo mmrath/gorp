@@ -7,6 +7,7 @@ package gorp
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"time"
 )
 
@@ -49,17 +50,26 @@ func (t *Transaction) Delete(list ...interface{}) (int64, error) {
 }
 
 // Get has the same behavior as DbMap.Get(), but runs in a transaction.
-func (t *Transaction) Get(i interface{}, keys ...interface{}) (interface{}, error) {
+func (t *Transaction) Get(i interface{}, keys ...interface{})  error {
 	return get(t.dbmap, t, i, keys...)
 }
 
 // Select has the same behavior as DbMap.Select(), but runs in a transaction.
-func (t *Transaction) Select(i interface{}, query string, args ...interface{}) ([]interface{}, error) {
+func (t *Transaction) Select(i interface{}, query string, args ...interface{})  error {
 	if t.dbmap.ExpandSliceArgs {
 		expandSliceArgs(&query, args...)
 	}
 
-	return hookedselect(t.dbmap, t, i, query, args...)
+	if t, err := toSliceType(i); t == nil {
+		if err != nil {
+			return err
+		}
+		return fmt.Errorf("a pointer to slice must be provided to Select as destination")
+	}
+
+	_, err := hookedselect(t.dbmap, t, i, query, args...)
+
+	return err
 }
 
 // Exec has the same behavior as DbMap.Exec(), but runs in a transaction.
