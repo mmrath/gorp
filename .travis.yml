@@ -1,7 +1,6 @@
 language: go
 go:
-- "1.12.x"
-- "1.13.x"
+- "1.14.x"
 - tip
 
 matrix:
@@ -13,9 +12,6 @@ services:
 - postgresql
 - sqlite3
 
-env:
-  global:
-  - secure: RriLxF6+2yMl67hdVv8ImXlu0h62mhcpqjaOgYNU+IEbUQ7hx96CKY6gkpYubW3BgApvF5RH6j3+HKvh2kGp0XhDOYOQCODfBSaSipZ5Aa5RKjsEYLtuVIobvJ80awR9hUeql69+WXs0/s72WThG0qTbOUY4pqHWfteeY235hWM=
 
 install:
   - go get -t -d
