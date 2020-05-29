@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgconn"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -68,6 +69,11 @@ func TestWithCanceledContext(t *testing.T) {
 	case "postgres":
 		// pq doesn't return standard deadline exceeded error
 		if err.Error() != "pq: canceling statement due to user request" {
+			t.Errorf("expected context.DeadlineExceeded, got %v", err)
+		}
+	case "pgx":
+		// pq doesn't return standard deadline exceeded error
+		if !pgconn.Timeout(err) {
 			t.Errorf("expected context.DeadlineExceeded, got %v", err)
 		}
 	default:

@@ -26,7 +26,7 @@ import (
 	"github.com/mmrath/gorp"
 
 	_ "github.com/go-sql-driver/mysql"
-	_ "github.com/lib/pq"
+	_ "github.com/jackc/pgx/v4/stdlib"
 	_ "github.com/mattn/go-sqlite3"
 	_ "github.com/ziutek/mymysql/godrv"
 )
@@ -2487,7 +2487,7 @@ func dialectAndDriver() (gorp.Dialect, string) {
 	case "gomysql":
 		return gorp.MySQLDialect{"InnoDB", "UTF8"}, "mysql"
 	case "postgres":
-		return gorp.PostgresDialect{}, "postgres"
+		return gorp.PostgresDialect{}, "pgx"
 	case "sqlite":
 		return gorp.SqliteDialect{}, "sqlite3"
 	}
