@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mmrath/gorp/v3"
+	"github.com/mmrath/gorp"
 	"github.com/poy/onpar"
 	"github.com/poy/onpar/expect"
 	"github.com/poy/onpar/matchers"

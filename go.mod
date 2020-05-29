@@ -1,4 +1,4 @@
-module github.com/mmrath/gorp/v3
+module github.com/mmrath/gorp
 
 go 1.13
 

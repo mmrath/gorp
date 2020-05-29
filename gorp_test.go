@@ -23,7 +23,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mmrath/gorp/v3"
+	"github.com/mmrath/gorp"
 
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
