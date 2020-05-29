@@ -414,7 +414,6 @@ func (curObj *TenantDynamic) SetTableName(tblName string) {
 	curObj.curTable = tblName
 }
 
-
 func TestCreateTablesIfNotExists(t *testing.T) {
 	dbmap := initDbMap()
 	defer dropAndClose(dbmap)

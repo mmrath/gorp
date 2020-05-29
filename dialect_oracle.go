@@ -101,15 +101,13 @@ func (d OracleDialect) InsertQueryToTarget(exec SqlExecutor, insertSql, idSql st
 	if err != nil {
 		return err
 	}
-	switch target.(type) {
+	switch target := target.(type) {
 	case *int64:
-		*(target.(*int64)) = id
+		*(target) = id
 	case *int32:
-		*(target.(*int32)) = int32(id)
-	case int:
-		*(target.(*int)) = int(id)
+		*(target) = int32(id)
 	default:
-		return fmt.Errorf("Id field can be int, int32 or int64")
+		return fmt.Errorf("id field can be int, int32 or int64")
 	}
 	return nil
 }

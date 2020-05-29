@@ -46,7 +46,7 @@ func lockError(m *DbMap, exec SqlExecutor, tableName string,
 
 	existing := reflect.New(elem.Type())
 
-	err := get(m, exec,existing.Interface(), keys...)
+	err := get(m, exec, existing.Interface(), keys...)
 	ole := OptimisticLockError{tableName, keys, true, existingVer}
 	if err != nil {
 		if err == sql.ErrNoRows {

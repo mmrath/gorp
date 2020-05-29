@@ -61,7 +61,6 @@ func (nt *dummyField) Scan(value interface{}) error {
 	return nil
 }
 
-var zeroVal reflect.Value
 var versFieldConst = "[gorp_ver_field]"
 
 // The TypeConverter interface provides a way to map a value of one
@@ -106,14 +105,6 @@ type SqlExecutor interface {
 	SelectOne(holder interface{}, query string, args ...interface{}) error
 	Query(query string, args ...interface{}) (*sql.Rows, error)
 	QueryRow(query string, args ...interface{}) *sql.Row
-}
-
-// DynamicTable allows the users of gorp to dynamically
-// use different database table names during runtime
-// while sharing the same golang struct for in-memory data
-type DynamicTable interface {
-	TableName() string
-	SetTableName(string)
 }
 
 // Compile-time check that DbMap and Transaction implement the SqlExecutor
@@ -256,13 +247,13 @@ func expandNamedQuery(m *DbMap, query string, keyGetter func(key string) reflect
 	}), args
 }
 
-func columnToFieldIndex(m *DbMap, t reflect.Type, name string, cols []string) ([][]int, error) {
+func columnToFieldIndex(m *DbMap, t reflect.Type, cols []string) ([][]int, error) {
 	colToFieldIndex := make([][]int, len(cols))
 
 	// check if type t is a mapped table - if so we'll
 	// check the table for column aliasing below
 	tableMapped := false
-	table := tableOrNil(m, t, name)
+	table := tableOrNil(m, t)
 	if table != nil {
 		tableMapped = true
 	}
@@ -307,30 +298,6 @@ func columnToFieldIndex(m *DbMap, t reflect.Type, name string, cols []string) ([
 	return colToFieldIndex, nil
 }
 
-func fieldByName(val reflect.Value, fieldName string) *reflect.Value {
-	// try to find field by exact match
-	f := val.FieldByName(fieldName)
-
-	if f != zeroVal {
-		return &f
-	}
-
-	// try to find by case insensitive match - only the Postgres driver
-	// seems to require this - in the case where columns are aliased in the sql
-	fieldNameL := strings.ToLower(fieldName)
-	fieldCount := val.NumField()
-	t := val.Type()
-	for i := 0; i < fieldCount; i++ {
-		sf := t.Field(i)
-		if strings.ToLower(sf.Name) == fieldNameL {
-			f := val.Field(i)
-			return &f
-		}
-	}
-
-	return nil
-}
-
 // toSliceType returns the element type of the given object, if the object is a
 // "*[]*Element" or "*[]Element". If not, returns nil.
 // err is returned if the user was trying to pass a pointer-to-slice but failed.
@@ -363,34 +330,20 @@ func toType(i interface{}) (reflect.Type, error) {
 	return t, nil
 }
 
-type foundTable struct {
-	table   *TableMap
-	dynName *string
-}
-
-func tableFor(m *DbMap, t reflect.Type) (*foundTable, error) {
-	table, err := m.TableFor(t, true)
-	if err != nil {
-		return nil, err
-	}
-	return &foundTable{table: table}, nil
-}
-
 func get(m *DbMap, exec SqlExecutor, i interface{}, keys ...interface{}) error {
 	t, err := toType(i)
 	if err != nil {
-		return  err
+		return err
 	}
 
-	foundTable, err := tableFor(m, t)
+	table, err := m.TableFor(t, true)
 	if err != nil {
-		return  err
+		return err
 	}
-	table := foundTable.table
 
 	plan := table.bindGet()
 
-	return SelectOne(m,exec,i, plan.query, keys...)
+	return SelectOne(m, exec, i, plan.query, keys...)
 }
 
 func delete(m *DbMap, exec SqlExecutor, list ...interface{}) (int64, error) {

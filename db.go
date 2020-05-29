@@ -385,22 +385,13 @@ func (m *DbMap) createTables(ifNotExists bool) error {
 // Returns an error when the table does not exist.
 func (m *DbMap) DropTable(table interface{}) error {
 	t := reflect.TypeOf(table)
-
-	tableName := ""
-	if dyn, ok := table.(DynamicTable); ok {
-		tableName = dyn.TableName()
-	}
-
-	return m.dropTable(t, tableName, false)
+	return m.dropTable(t, false)
 }
 
 // DropTableIfExists drops an individual table when the table exists.
 func (m *DbMap) DropTableIfExists(table interface{}) error {
 	t := reflect.TypeOf(table)
-
-	tableName := ""
-
-	return m.dropTable(t, tableName, true)
+	return m.dropTable(t, true)
 }
 
 // DropTables iterates through TableMaps registered to this DbMap and
@@ -429,8 +420,8 @@ func (m *DbMap) dropTables(addIfExists bool) (err error) {
 }
 
 // Implementation of dropping a single table.
-func (m *DbMap) dropTable(t reflect.Type, name string, addIfExists bool) error {
-	table := tableOrNil(m, t, name)
+func (m *DbMap) dropTable(t reflect.Type, addIfExists bool) error {
+	table := tableOrNil(m, t)
 	if table == nil {
 		return fmt.Errorf("table %s was not registered", table.TableName)
 	}
@@ -675,7 +666,7 @@ func (m *DbMap) Begin() (*Transaction, error) {
 // If no table is mapped to that type an error is returned.
 // If checkPK is true and the mapped table has no registered PKs, an error is returned.
 func (m *DbMap) TableFor(t reflect.Type, checkPK bool) (*TableMap, error) {
-	table := tableOrNil(m, t, "")
+	table := tableOrNil(m, t)
 	if table == nil {
 		return nil, fmt.Errorf("no table found for type: %v", t.Name())
 	}
@@ -700,11 +691,7 @@ func (m *DbMap) Prepare(query string) (*sql.Stmt, error) {
 	return prepare(m, query)
 }
 
-func tableOrNil(m *DbMap, t reflect.Type, name string) *TableMap {
-	if name != "" {
-		return nil
-	}
-
+func tableOrNil(m *DbMap, t reflect.Type) *TableMap {
 	for i := range m.tables {
 		table := m.tables[i]
 		if table.gotype == t {
@@ -767,7 +754,7 @@ func (m *DbMap) trace(started time.Time, query string, args ...interface{}) {
 
 	if m.logger != nil {
 		var margs = argsString(args...)
-		m.logger.Printf("%s%s [%s] (%v)", m.logPrefix, query, margs, (time.Now().Sub(started)))
+		m.logger.Printf("%s%s [%s] (%v)", m.logPrefix, query, margs, (time.Since(started)))
 	}
 }
 

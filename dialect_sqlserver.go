@@ -70,7 +70,7 @@ func (d SqlServerDialect) ToSqlType(val reflect.Type, maxsize int, isAutoIncr bo
 		if d.Version == "2005" {
 			maxsize = 255
 		} else {
-			return fmt.Sprintf("nvarchar(max)")
+			return "nvarchar(max)"
 		}
 	}
 	return fmt.Sprintf("nvarchar(%d)", maxsize)
