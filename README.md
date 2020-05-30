@@ -779,3 +779,8 @@ hand written SQL.
 ## Authors and Contributors
 https://github.com/mmrath/gorp/graphs/contributors
 
+I have copied some files from PRs manually as it was difficult to apply the PR on my modified code.
+I try to list the PRs here
+https://github.com/go-gorp/gorp/pull/407
+
+
