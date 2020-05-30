@@ -7,7 +7,6 @@
 package gorp_test
 
 import (
-	"bytes"
 	"database/sql"
 	"database/sql/driver"
 	"encoding/json"
@@ -1954,7 +1953,7 @@ func TestQuoteTableNames(t *testing.T) {
 	quotedTableName := dbmap.Dialect.QuoteField("person_test")
 
 	// Use a buffer to hold the log to check generated queries
-	logBuffer := &bytes.Buffer{}
+	logBuffer := &strings.Builder{}
 	dbmap.TraceOn("", log.New(logBuffer, "gorptest:", log.Lmicroseconds))
 
 	// Create some rows
@@ -1963,7 +1962,7 @@ func TestQuoteTableNames(t *testing.T) {
 
 	// Check if Insert quotes the table name
 	id := dbmap.Insert(p1)
-	if !bytes.Contains(logBuffer.Bytes(), []byte(quotedTableName)) {
+	if !strings.Contains(logBuffer.String(), quotedTableName) {
 		t.Errorf(errorTemplate, quotedTableName)
 	}
 	logBuffer.Reset()
@@ -1971,7 +1970,7 @@ func TestQuoteTableNames(t *testing.T) {
 	// Check if Get quotes the table name
 	_ = dbmap.Get(&Person{}, id)
 
-	if !bytes.Contains(logBuffer.Bytes(), []byte(quotedTableName)) {
+	if !strings.Contains(logBuffer.String(), quotedTableName) {
 		t.Errorf(errorTemplate, quotedTableName)
 	}
 	logBuffer.Reset()
