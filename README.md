@@ -7,7 +7,18 @@
 
 ### Fork
 
-This is a fork of go-gorp/gorp
+This is a fork of https://github.com/go-gorp/gorp
+
+I have done the following changes after fork
+1. Changed `Get` to throw error(`sql.ErrNoRows`) instead of null in case record is not found
+2. Changed `Select` and `SelectOne` to return rows in the provided input parameter instead of `[]interface{}`. I found that returning `[]interface{}` means that I need to do type cast later.
+3. Removed dynamic table functionality. I thought this would be much cleaner by mapping a new struct for table. I have not really seen the much usage of this functionality.
+4. Run tests with pgx driver instead of pq, because I am using pgx
+
+I plan to add some more functionality without breaking the current code. 
+I would be happy to accept any PR as long as 
+1. It does not break current code
+2. It does not introduce full ORM functionality. Gorp will only ever work on one struct(or slice), i.e. relationships will not be supported.
 
 ## Introduction
 
