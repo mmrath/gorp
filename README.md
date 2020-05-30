@@ -1,11 +1,9 @@
 # Go Relational Persistence
 
-[![build status](https://img.shields.io/travis/go-gorp/gorp/master.svg)](http://travis-ci.org/go-gorp/gorp)
-[![code coverage](https://img.shields.io/coveralls/go-gorp/gorp.svg)](https://coveralls.io/r/go-gorp/gorp)
-[![issues](https://img.shields.io/github/issues/go-gorp/gorp.svg)](https://github.com/go-gorp/gorp/issues)
-[![godoc v1](https://img.shields.io/badge/godoc-v1-375EAB.svg)](https://godoc.org/gopkg.in/gorp.v1)
+[![build status](https://img.shields.io/travis/mmrath/gorp/master.svg)](http://travis-ci.org/mmrath/gorp)
+[![code coverage](https://img.shields.io/coveralls/go-gorp/gorp.svg)](https://coveralls.io/r/mmrath/gorp)
+[![issues](https://img.shields.io/github/issues/go-gorp/gorp.svg)](https://github.com/mmrath/gorp/issues)
 [![godoc v2](https://img.shields.io/badge/godoc-v2-375EAB.svg)](https://godoc.org/gopkg.in/gorp.v2)
-[![godoc bleeding edge](https://img.shields.io/badge/godoc-bleeding--edge-375EAB.svg)](https://godoc.org/github.com/go-gorp/gorp)
 
 ### Fork
 
@@ -44,33 +42,17 @@ algorithms, not infrastructure.
 
 ## Installation
 
-Use `go get` or your favorite vendoring tool, using whichever import
-path you'd like.
+gorp uses go modules. 
 
 ## Versioning
 
-We use semantic version tags.  Feel free to import through `gopkg.in`
-(e.g. `gopkg.in/gorp.v2`) to get the latest tag for a major version,
-or check out the tag using your favorite vendoring tool.
+Gorp tries to adhere to semantic versioning and we take backward compatibility seriously. I am hoping that I will not have to make backward incompatible change.  
 
-Development is not very active right now, but we have plans to
-restructure `gorp` as we continue to move toward a more extensible
-system.  Whenever a breaking change is needed, the major version will
-be bumped.
-
-The `master` branch is where all development is done, and breaking
-changes may happen from time to time.  That said, if you want to live
-on the bleeding edge and are comfortable updating your code when we
-make a breaking change, you may use `github.com/go-gorp/gorp` as your
-import path.
-
-Check the version tags to see what's available.  We'll make a good
-faith effort to add badges for new versions, but we make no
-guarantees.
+All the DDL generation functionality is not covered by the above. You should only use DDL generation offered by Gorp in for quick POCs. You should not use this for schema migrations.
 
 ## Supported Go versions
 
-This package is guaranteed to be compatible with the latest 2 major
+This package is guaranteed to be compatible with the latest major
 versions of Go.
 
 Any earlier versions are only supported on a best effort basis and can
@@ -78,20 +60,10 @@ be dropped any time.  Go has a great compatibility promise. Upgrading
 your program to a newer version of Go should never really be a
 problem.
 
-## Migration guide
-
-#### Pre-v2 to v2
-Automatic mapping of the version column used in optimistic locking has
-been removed as it could cause problems if the type was not int. The
-version column must now explicitly be set with
-`tablemap.SetVersionCol()`.
 
 ## Help/Support
 
-Use our [`gitter` channel](https://gitter.im/go-gorp/gorp).  We used
-to use IRC, but with most of us being pulled in many directions, we
-often need the email notifications from `gitter` to yell at us to sign
-in.
+Please raise an issue on this github repo.
 
 ## Quickstart
 
@@ -100,7 +72,7 @@ package main
 
 import (
     "database/sql"
-    "gopkg.in/gorp.v1"
+    "github.com/mmrath/gorp"
     _ "github.com/mattn/go-sqlite3"
     "log"
     "time"
@@ -145,7 +117,7 @@ func main() {
 
     // fetch all rows
     var posts []Post
-    _, err = dbmap.Select(&posts, "select * from posts order by post_id")
+    err = dbmap.Select(&posts, "select * from posts order by post_id")
     checkErr(err, "Select failed")
     log.Println("All rows:")
     for x, p := range posts {
@@ -375,12 +347,12 @@ count, err := dbmap.Delete(inv1)
 ### Select by Key
 
 Use the `Get` method to fetch a single row by primary key.  It returns
-nil if no row is found.
+`error` (`sql.ErrNoRows`) if no row is found.
 
 ```go
 // fetch Invoice with Id=99
-obj, err := dbmap.Get(Invoice{}, 99)
-inv := obj.(*Invoice)
+obj := &Invoice{}
+err := dbmap.Get(obj, 99)
 ```
 
 ### Ad Hoc SQL
@@ -393,11 +365,11 @@ or a single struct.
 ```go
 // Select a slice - first return value is not needed when a slice pointer is passed to Select()
 var posts []Post
-_, err := dbmap.Select(&posts, "select * from post order by id")
+err := dbmap.Select(&posts, "select * from post order by id")
 
 // You can also use primitive types
 var ids []string
-_, err := dbmap.Select(&ids, "select id from post")
+err := dbmap.Select(&ids, "select id from post")
 
 // Select a single row.
 // Returns an error if no row found, or if more than one row is found
@@ -438,7 +410,7 @@ query := "select i.Id InvoiceId, p.Id PersonId, i.Memo, p.FName " +
 
 // pass a slice to Select()
 var list []InvoicePersonView
-_, err := dbmap.Select(&list, query)
+err := dbmap.Select(&list, query)
 
 // this should test true
 expected := InvoicePersonView{inv1.Id, p1.Id, inv1.Memo, p1.FName}
@@ -466,7 +438,7 @@ You may use a map or struct to bind parameters by name.  This is currently
 only supported in SELECT queries.
 
 ```go
-_, err := dbm.Select(&dest, "select * from Foo where name = :name and age = :age", map[string]interface{}{
+err := dbm.Select(&dest, "select * from Foo where name = :name and age = :age", map[string]interface{}{
   "name": "Rob",
   "age": 31,
 })
@@ -585,9 +557,8 @@ type Person struct {
 p1 := &Person{0, 0, 0, "Bob", "Smith", 0}
 err = dbmap.Insert(p1)  // Version is now 1
 checkErr(err, "Insert failed")
-
-obj, err := dbmap.Get(Person{}, p1.Id)
-p2 := obj.(*Person)
+p2 := &Person{}
+err := dbmap.Get(p2, p1.Id)
 p2.LName = "Edwards"
 _,err = dbmap.Update(p2)  // Version is now 2
 checkErr(err, "Update failed")
@@ -786,14 +757,14 @@ script I run locally to test the library.
 
 ## Performance
 
+I have not benchmarked my fork yet. But the below is from original repo.
+
 gorp uses reflection to construct SQL queries and bind parameters.
 See the BenchmarkNativeCrud vs BenchmarkGorpCrud in gorp_test.go for a
 simple perf test.  On my MacBook Pro gorp is about 2-3% slower than
 hand written SQL.
 
 
-## Contributors
+## Authors and Contributors
+https://github.com/mmrath/gorp/graphs/contributors
 
-* matthias-margush - column aliasing via tags
-* Rob Figueiredo - @robfig
-* Quinn Slack - @sqs
