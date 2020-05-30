@@ -30,7 +30,7 @@ go test -tags integration $coveralls_testflags $GOBUILDFLAG $@ .
 rm -f /tmp/gorptest.bin
 
 case $(go version) in
-  *go1.4*)
+  *go1.14*)
     if [ "$(type -p goveralls)" != "" ]; then
 	  goveralls -covermode=count -coverprofile=coverage.out -service=travis-ci
     elif [ -x $HOME/gopath/bin/goveralls ]; then
