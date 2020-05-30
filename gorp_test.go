@@ -186,6 +186,18 @@ type WithIgnoredColumn struct {
 	Created  int64
 }
 
+type WithNoInsertColumn struct {
+	Id             int64
+	Created        int64
+	InsertIgnoreMe sql.NullInt64 `db:"ignore_me,noinsert"`
+}
+
+type WithNoUpdateColumn struct {
+	Id             int64
+	Created        int64
+	UpdateIgnoreMe int64 `db:"ignore_me,noupdate"`
+}
+
 type IdCreated struct {
 	Id      int64
 	Created int64
@@ -1461,6 +1473,78 @@ func TestWithIgnoredColumn(t *testing.T) {
 	}
 }
 
+func TestWithNoInsertColumn(t *testing.T) {
+	dbmap := initDbMap()
+	defer dropAndClose(dbmap)
+
+	ic := &WithNoInsertColumn{Id: 1, Created: 1, InsertIgnoreMe: sql.NullInt64{Int64: 10, Valid: true}}
+	_insert(dbmap, ic)
+	expected := &WithNoInsertColumn{1, 1, sql.NullInt64{Int64: 0, Valid: false}}
+	ic2 := _get(dbmap, &WithNoInsertColumn{}, ic.Id).(*WithNoInsertColumn)
+
+	if !reflect.DeepEqual(expected, ic2) {
+		t.Errorf("%v != %v", expected, ic2)
+	}
+	ic2.InsertIgnoreMe = sql.NullInt64{Int64: 15, Valid: true}
+
+	c := _update(dbmap, ic2)
+	if c != 1 {
+		t.Errorf("Did not update row with Id: %d", ic.Id)
+		return
+	}
+
+	ic3 := _get(dbmap, &WithNoInsertColumn{}, ic.Id).(*WithNoInsertColumn)
+
+	if !reflect.DeepEqual(ic2, ic3) {
+		t.Errorf("%v != %v", ic2, ic3)
+	}
+
+	if _del(dbmap, ic) != 1 {
+		t.Errorf("Did not delete row with Id: %d", ic.Id)
+		return
+	}
+	if _get(dbmap, &WithNoInsertColumn{}, ic.Id) != nil {
+		t.Errorf("Found id: %d after Delete()", ic.Id)
+	}
+}
+
+func TestWithNoUpdateColumn(t *testing.T) {
+	dbmap := initDbMap()
+	defer dropAndClose(dbmap)
+
+	ic := &WithNoUpdateColumn{Id: 1, Created: 1, UpdateIgnoreMe: 10}
+	_insert(dbmap, ic)
+	expected := &WithNoUpdateColumn{1, 1, 10}
+	ic2 := _get(dbmap, &WithNoUpdateColumn{}, ic.Id).(*WithNoUpdateColumn)
+
+	if !reflect.DeepEqual(expected, ic2) {
+		t.Errorf("%v != %v", expected, ic2)
+	}
+	ic2.UpdateIgnoreMe = 20
+	ic2.Created = 30
+
+	c := _update(dbmap, ic2)
+	if c != 1 {
+		t.Errorf("Did not update row with Id: %d", ic.Id)
+		return
+	}
+
+	expected = &WithNoUpdateColumn{1, 30, 10}
+	ic3 := _get(dbmap, &WithNoUpdateColumn{}, ic.Id).(*WithNoUpdateColumn)
+
+	if !reflect.DeepEqual(expected, ic3) {
+		t.Errorf("%v != %v", expected, ic3)
+	}
+
+	if _del(dbmap, ic) != 1 {
+		t.Errorf("Did not delete row with Id: %d", ic.Id)
+		return
+	}
+	if _get(dbmap, &WithNoUpdateColumn{}, ic.Id) != nil {
+		t.Errorf("Found id: %d after Delete()", ic.Id)
+	}
+}
+
 func TestColumnFilter(t *testing.T) {
 	dbmap := initDbMap()
 	defer dropAndClose(dbmap)
@@ -2410,6 +2494,8 @@ func initDbMap() *gorp.DbMap {
 	dbmap.AddTableWithName(OverriddenInvoice{}, "invoice_override_test").SetKeys(false, "Id")
 	dbmap.AddTableWithName(Person{}, "person_test").SetKeys(true, "Id").SetVersionCol("Version")
 	dbmap.AddTableWithName(WithIgnoredColumn{}, "ignored_column_test").SetKeys(true, "Id")
+	dbmap.AddTableWithName(WithNoInsertColumn{}, "insert_ignored_column_test").SetKeys(true, "Id")
+	dbmap.AddTableWithName(WithNoUpdateColumn{}, "update_ignored_column_test").SetKeys(true, "Id")
 	dbmap.AddTableWithName(IdCreated{}, "id_created_test").SetKeys(true, "Id")
 	dbmap.AddTableWithName(TypeConversionExample{}, "type_conv_test").SetKeys(true, "Id")
 	dbmap.AddTableWithName(WithEmbeddedStruct{}, "embedded_struct_test").SetKeys(true, "Id")

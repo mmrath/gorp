@@ -35,6 +35,10 @@ type ColumnMap struct {
 	isPK       bool
 	isAutoIncr bool
 	isNotNull  bool
+
+	zeroAsNull bool
+	noInsert   bool
+	noUpdate   bool
 }
 
 // Rename allows you to specify the column name in the table
@@ -72,5 +76,25 @@ func (c *ColumnMap) SetNotNull(nn bool) *ColumnMap {
 // to alter the generated type for "create table" statements
 func (c *ColumnMap) SetMaxSize(size int) *ColumnMap {
 	c.MaxSize = size
+	return c
+}
+
+
+// SetZeroAsNull converts nulls to zeros while reading and zeros to null while writing
+// ** This functionality is not yet implemented **
+func (c *ColumnMap) SetZeroAsNull(b bool) *ColumnMap {
+	c.zeroAsNull = b
+	return c
+}
+
+// SetNoInsert omits the column while inserting
+func (c *ColumnMap) SetNoInsert(b bool) *ColumnMap {
+	c.noInsert = b
+	return c
+}
+
+// SetNoUpdate omits the column while updating. This does not impact update selective columns
+func (c *ColumnMap) SetNoUpdate(b bool) *ColumnMap {
+	c.noUpdate = b
 	return c
 }

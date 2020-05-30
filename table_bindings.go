@@ -30,7 +30,7 @@ type CustomScanner struct {
 type ColumnFilter func(*ColumnMap) bool
 
 func acceptAllFilter(col *ColumnMap) bool {
-	return true
+	return !col.noUpdate
 }
 
 // Bind is called automatically by gorp after Scan()
@@ -115,7 +115,7 @@ func (t *TableMap) bindInsert(elem reflect.Value) (bindInstance, error) {
 		for y := range t.Columns {
 			col := t.Columns[y]
 			if !(col.isAutoIncr && t.dbmap.Dialect.AutoIncrBindValue() == "") {
-				if !col.Transient {
+				if !col.Transient && !col.noInsert {
 					if !first {
 						s.WriteString(",")
 						s2.WriteString(",")
