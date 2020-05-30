@@ -12,6 +12,7 @@ import (
 	"reflect"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -247,7 +248,37 @@ func expandNamedQuery(m *DbMap, query string, keyGetter func(key string) reflect
 	}), args
 }
 
+type fieldCacheKey struct {
+	t    reflect.Type
+	name string
+	cols string
+}
+
+type fieldCacheEntry struct {
+	mapping [][]int
+	err     error
+}
+
 func columnToFieldIndex(m *DbMap, t reflect.Type, cols []string) ([][]int, error) {
+	var ck fieldCacheKey
+	var err error
+	if m.Cache != nil {
+		ck.t = t
+		ck.cols = strings.Join(cols, ",")
+
+		rv, ok := m.Cache.Load(ck)
+		if ok {
+			entry := rv.(*fieldCacheEntry)
+			return entry.mapping, entry.err
+		}
+	} else {
+		m.lock.Lock()
+		if m.Cache == nil {
+			m.Cache = &sync.Map{}
+		}
+		m.lock.Unlock()
+	}
+
 	colToFieldIndex := make([][]int, len(cols))
 
 	// check if type t is a mapped table - if so we'll
@@ -289,13 +320,20 @@ func columnToFieldIndex(m *DbMap, t reflect.Type, cols []string) ([][]int, error
 			missingColNames = append(missingColNames, colName)
 		}
 	}
+
 	if len(missingColNames) > 0 {
-		return colToFieldIndex, &NoFieldInTypeError{
+		err = &NoFieldInTypeError{
 			TypeName:        t.Name(),
 			MissingColNames: missingColNames,
 		}
 	}
-	return colToFieldIndex, nil
+	entry := &fieldCacheEntry{
+		mapping: colToFieldIndex,
+		err:     err,
+	}
+	m.Cache.Store(ck, entry)
+
+	return colToFieldIndex, err
 }
 
 // toSliceType returns the element type of the given object, if the object is a

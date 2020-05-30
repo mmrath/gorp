@@ -15,6 +15,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -92,6 +93,14 @@ type DbMap struct {
 	tables    []*TableMap
 	logger    GorpLogger
 	logPrefix string
+	lock sync.RWMutex
+
+	Cache Cache
+}
+
+type Cache interface {
+	Load(key interface{}) (value interface{}, ok bool)
+	Store(key, value interface{})
 }
 
 func (m *DbMap) WithContext(ctx context.Context) SqlExecutor {
