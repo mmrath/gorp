@@ -1570,12 +1570,29 @@ func TestWithColumnNameMapper(t *testing.T) {
 	err = dbmap.SelectOne(&ic2, "SELECT id,created_at,http_request FROM with_column_mapping")
 
 	if err != nil {
-		t.Errorf("failed to select")
+		t.Errorf("failed to select : %v", err)
 	}
 
 	if !reflect.DeepEqual(ic, ic2) {
 		t.Errorf("%v != %v", ic, ic2)
 	}
+
+	type UnmappedStruct struct {
+		Id          int64
+		CreatedAt   int64
+		HTTPRequest int64
+	}
+
+	ic3 := &UnmappedStruct{}
+	err = dbmap.SelectOne(&ic3, "SELECT id,created_at,http_request FROM with_column_mapping")
+	if err != nil {
+		t.Errorf("failed to select %v", err)
+	}
+
+	if ic2.Id  != ic3.Id || ic2.CreatedAt != ic3.CreatedAt || ic2.HTTPRequest != ic3.HTTPRequest {
+		t.Errorf("%v != %v", ic2, ic3)
+	}
+
 }
 
 

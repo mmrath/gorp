@@ -303,7 +303,11 @@ func columnToFieldIndex(m *DbMap, t reflect.Type, cols []string) ([][]int, error
 			if fieldName == "-" {
 				return false
 			} else if fieldName == "" {
-				fieldName = field.Name
+				if m.ColumnNameMapper != nil{
+					fieldName = m.ColumnNameMapper(field.Name)
+				}else {
+					fieldName = field.Name
+				}
 			}
 			if tableMapped {
 				colMap := colMapOrNil(table, fieldName)
