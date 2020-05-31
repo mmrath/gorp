@@ -192,6 +192,12 @@ type WithNoInsertColumn struct {
 	InsertIgnoreMe sql.NullInt64 `db:"ignore_me,noinsert"`
 }
 
+type WithColumnMapping struct {
+	Id          int64
+	CreatedAt   int64
+	HTTPRequest int64
+}
+
 type WithNoUpdateColumn struct {
 	Id             int64
 	Created        int64
@@ -1545,6 +1551,34 @@ func TestWithNoUpdateColumn(t *testing.T) {
 	}
 }
 
+func TestWithColumnNameMapper(t *testing.T) {
+	dbmap := initDbMap()
+	defer dropAndClose(dbmap)
+	dbmap.ColumnNameMapper = gorp.ToSnakeCase
+
+	defer func() {dbmap.ColumnNameMapper = nil}()
+
+	dbmap.AddTableWithName(WithColumnMapping{}, "with_column_mapping")
+	err := dbmap.CreateTablesIfNotExists()
+	if err != nil {
+		t.Errorf("create tables if not exists failed")
+	}
+	ic := &WithColumnMapping{Id: 1, CreatedAt: 1,  HTTPRequest: 10}
+	_insert(dbmap, ic)
+
+	ic2 := &WithColumnMapping{}
+	err = dbmap.SelectOne(&ic2, "SELECT id,created_at,http_request FROM with_column_mapping")
+
+	if err != nil {
+		t.Errorf("failed to select")
+	}
+
+	if !reflect.DeepEqual(ic, ic2) {
+		t.Errorf("%v != %v", ic, ic2)
+	}
+}
+
+
 func TestColumnFilter(t *testing.T) {
 	dbmap := initDbMap()
 	defer dropAndClose(dbmap)
@@ -2499,8 +2533,6 @@ func initDbMap() *gorp.DbMap {
 	dbmap.AddTableWithName(IdCreated{}, "id_created_test").SetKeys(true, "Id")
 	dbmap.AddTableWithName(TypeConversionExample{}, "type_conv_test").SetKeys(true, "Id")
 	dbmap.AddTableWithName(WithEmbeddedStruct{}, "embedded_struct_test").SetKeys(true, "Id")
-	//dbmap.AddTableWithName(WithEmbeddedStructConflictingEmbeddedMemberNames{}, "embedded_struct_conflict_name_test").SetKeys(true, "Id")
-	//dbmap.AddTableWithName(WithEmbeddedStructSameMemberName{}, "embedded_struct_same_member_name_test").SetKeys(true, "Id")
 	dbmap.AddTableWithName(WithEmbeddedStructBeforeAutoincrField{}, "embedded_struct_before_autoincr_test").SetKeys(true, "Id")
 	dbmap.AddTableWithName(WithEmbeddedAutoincr{}, "embedded_autoincr_test").SetKeys(true, "Id")
 	dbmap.AddTableWithName(WithTime{}, "time_test").SetKeys(true, "Id")

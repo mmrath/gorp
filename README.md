@@ -3,7 +3,7 @@
 [![build status](https://img.shields.io/travis/mmrath/gorp/master.svg)](http://travis-ci.org/mmrath/gorp)
 [![code coverage](https://img.shields.io/coveralls/mmrath/gorp.svg)](https://coveralls.io/r/mmrath/gorp)
 [![issues](https://img.shields.io/github/issues/mmrath/gorp.svg)](https://github.com/mmrath/gorp/issues)
-[![godoc v2](https://img.shields.io/badge/godoc-v2-375EAB.svg)](https://godoc.org/gopkg.in/gorp.v2)
+[![godoc](https://img.shields.io/badge/godoc-master-green)](https://pkg.go.dev/github.com/mmrath/gorp?tab=doc)
 
 ### Fork
 

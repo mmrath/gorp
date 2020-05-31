@@ -7,5 +7,5 @@
 // compliant database/sql driver.
 //
 // Source code and project home:
-// https://github.com/go-gorp/gorp
+// https://github.com/mmrath/gorp
 package gorp

@@ -95,6 +95,7 @@ type DbMap struct {
 	lock      sync.RWMutex
 
 	Cache Cache
+	ColumnNameMapper func(fieldName string) string
 }
 
 type Cache interface {
@@ -302,8 +303,13 @@ func (m *DbMap) readStructColumns(t reflect.Type) (cols []*ColumnMap, primaryKey
 					panic(fmt.Sprintf("Unrecognized tag option for field %v: %v", f.Name, arg))
 				}
 			}
+
 			if columnName == "" {
-				columnName = f.Name
+				if m.ColumnNameMapper != nil {
+					columnName = m.ColumnNameMapper(f.Name)
+				}else {
+					columnName = f.Name
+				}
 			}
 
 			gotype := f.Type
