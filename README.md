@@ -14,6 +14,8 @@ I have done the following changes after fork
 2. Changed `Select` and `SelectOne` to return rows in the provided input parameter instead of `[]interface{}`. I found that returning `[]interface{}` means that I need to do type cast later.
 3. Removed dynamic table functionality. I thought this would be much cleaner by mapping a new struct for table. I have not really seen the much usage of this functionality.
 4. Run tests with pgx driver instead of pq, because I am using pgx
+5. Add support for struct tags `noupdate`, `noinsert` which omits the column from corresponding statement
+6. Add support for firld name to column name mapping via a function
 
 I plan to add some more functionality without breaking the current code. 
 I would be happy to accept any PR as long as 
